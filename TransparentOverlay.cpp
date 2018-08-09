@@ -1,9 +1,9 @@
 #include <Windows.h>
-#include <vector>
 
 using namespace std;
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+void cleanUpObjects(HPEN pen);
 
 HINSTANCE hInst;
 
@@ -112,3 +112,41 @@ int CALLBACK WinMain(
         }
         Sleep(5);
     }
+    cleanUpObjects(myPen);
+    cleanUpObjects(originalPen);
+    return msg.wParam;
+}
+
+LRESULT CALLBACK WndProc(
+    HWND hWnd,
+    UINT uMsg,
+    WPARAM wParam,
+    LPARAM lParam
+)
+{
+    PAINTSTRUCT ps;
+    HDC hdc;
+
+    switch (uMsg)
+    {
+    case WM_PAINT:
+        hdc = BeginPaint(hWnd, &ps);
+        EndPaint(hWnd, &ps);
+        break;
+    case WM_DESTROY:
+        DestroyWindow(hWnd);
+        PostQuitMessage(0);
+        break;
+
+    default:
+        return DefWindowProc(hWnd, uMsg, wParam, lParam);
+        break;
+    }
+    return 0;
+}
+
+
+void cleanUpObjects(HPEN pen)
+{
+    DeleteObject(pen);
+}
