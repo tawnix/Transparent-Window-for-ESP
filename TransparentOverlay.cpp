@@ -1,5 +1,7 @@
 #include <Windows.h>
+#include <vector>
 
+using namespace std;
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
@@ -12,10 +14,11 @@ int CALLBACK WinMain(
     LPSTR lpCmdLine,
     int nCmdShow)
 {
-    RECT myRect;
+    RECT overlayWindowRect;
+    RECT gameWindowRect;
     HWND gameWindowHandle;
     gameWindowHandle = FindWindowA(0, "Call of Duty®");
-    GetWindowRect(gameWindowHandle, &myRect);
+    GetWindowRect(gameWindowHandle, &gameWindowRect);
 
     WNDCLASSEX w;
     w.cbSize = sizeof(WNDCLASSEX);
@@ -39,12 +42,13 @@ int CALLBACK WinMain(
 
     hInst = hInstance;
 
+
     HWND hWnd = CreateWindowEx(WS_EX_TOPMOST | WS_EX_LAYERED | WS_EX_TRANSPARENT, "ClassName", "Window",
         WS_CAPTION,
-        myRect.left,   //x 
-        myRect.top,   // y
-        myRect.right - myRect.left,   // width
-        myRect.bottom - myRect.top,   // height
+        gameWindowRect.left,   //x 
+        gameWindowRect.top,   // y
+        gameWindowRect.right - gameWindowRect.left,   // width
+        gameWindowRect.bottom - gameWindowRect.top,   // height
         NULL, NULL,
         hInstance, NULL);
 
@@ -54,6 +58,11 @@ int CALLBACK WinMain(
 
         return -1;
     }
+    else
+    {
+        GetWindowRect(hWnd, &overlayWindowRect);
+    }
+
 
     // Remove Borders around window
     SetWindowLong(hWnd, GWL_STYLE, GetWindowLong(hWnd, GWL_STYLE) & ~(WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_BORDER));
@@ -75,39 +84,31 @@ int CALLBACK WinMain(
 
     //main loop waits for messages
     MSG msg;
-    while (GetMessage(&msg, NULL, 0, 0))
+    while (true)
     {
-        Rectangle(myHDC, 200, 200, 300, 400);
+       //peekmessage allows for program to do multiple things at once. faster than getmessage()
+        if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
+        {
+            TranslateMessage(&msg);
+            DispatchMessage(&msg);
 
-        TranslateMessage(&msg);
-        DispatchMessage(&msg);
+            // if msg is quit, quit
+            if (msg.message == WM_QUIT)
+                break;
+        }
+        else
+        {
+            Rectangle(myHDC, 200, 200, 300, 400);
+            
+            ZeroMemory(&gameWindowRect, sizeof(gameWindowRect));
+            GetWindowRect(gameWindowHandle, &gameWindowRect);
+
+            if (gameWindowRect.right != overlayWindowRect.right)
+            {
+                ZeroMemory(&gameWindowRect, sizeof(gameWindowRect));
+                GetWindowRect(gameWindowHandle, &gameWindowRect);
+                MoveWindow(hWnd, gameWindowRect.left, gameWindowRect.top, gameWindowRect.right - gameWindowRect.left, gameWindowRect.bottom - gameWindowRect.top, TRUE);
+            }
+        }
+        Sleep(5);
     }
-    return msg.wParam;
-}
-
-LRESULT CALLBACK WndProc(
-    HWND hWnd,
-    UINT uMsg,
-    WPARAM wParam,
-    LPARAM lParam
-)
-{
-    PAINTSTRUCT ps;
-    HDC hdc;
-
-    switch (uMsg)
-    {
-    case WM_PAINT:
-        hdc = BeginPaint(hWnd, &ps);
-        EndPaint(hWnd, &ps);
-        break;
-    case WM_DESTROY:
-        PostQuitMessage(0);
-        break;
-
-    default:
-        return DefWindowProc(hWnd, uMsg, wParam, lParam);
-        break;
-    }
-    return 0;
-}
